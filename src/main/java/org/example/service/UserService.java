@@ -1,4 +1,4 @@
-package org.example;
+package org.example.service;
 
 import org.example.dao.UserDao;
 import org.example.dao.UserDaoImpl;
@@ -7,12 +7,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Scanner;
 
 public class UserService {
     private static final Logger logger = LogManager.getLogger(UserService.class);
     private final UserDao userDao = new UserDaoImpl();
     private final Scanner scanner = new Scanner(System.in);
+    private User User;
 
     public void start() {
         boolean running = true;
@@ -30,7 +32,7 @@ public class UserService {
 
             switch (choice) {
                 case 1:
-                    createUser();
+                    createUser("Test User", "test@example.com", 25);
                     break;
                 case 2:
                     viewAllUsers();
@@ -53,7 +55,7 @@ public class UserService {
         }
     }
 
-    private void createUser() {
+    public User createUser(String testUser, String mail, int i) {
         System.out.println("\nCreate New User");
         System.out.print("Enter name: ");
         String name = scanner.nextLine();
@@ -73,9 +75,10 @@ public class UserService {
             System.out.println("Error creating user: " + e.getMessage());
             logger.error("Error creating user", e);
         }
+        return User;
     }
 
-    private void viewAllUsers() {
+    public void viewAllUsers() {
         System.out.println("\nAll Users:");
         try {
             List<User> users = userDao.findAll();
@@ -91,13 +94,13 @@ public class UserService {
         }
     }
 
-    private void viewUserById() {
+    public void viewUserById() {
         System.out.print("\nEnter user ID: ");
         Long id = readLongInput();
 
         try {
-            User user = userDao.findById(id);
-            if (user != null) {
+            Optional<User> user = userDao.findById(id);
+            if (user.isPresent()) {
                 System.out.println(user);
                 logger.info("Viewed user by ID: {}", id);
             } else {
@@ -109,13 +112,13 @@ public class UserService {
         }
     }
 
-    private void updateUser() {
+    public void updateUser() {
         System.out.print("\nEnter user ID to update: ");
         Long id = readLongInput();
 
         try {
-            User user = userDao.findById(id);
-            if (user == null) {
+            Optional<User> user = userDao.findById(id);
+            if (user.isEmpty()) {
                 System.out.println("User not found with ID: " + id);
                 return;
             }
@@ -125,22 +128,22 @@ public class UserService {
             System.out.print("Enter new name (leave blank to keep current): ");
             String name = scanner.nextLine();
             if (!name.isEmpty()) {
-                user.setName(name);
+                user.get().setName(name);
             }
 
             System.out.print("Enter new email (leave blank to keep current): ");
             String email = scanner.nextLine();
             if (!email.isEmpty()) {
-                user.setEmail(email);
+                user.get().setEmail(email);
             }
 
             System.out.print("Enter new age (0 to keep current): ");
             int age = readIntInput();
             if (age != 0) {
-                user.setAge(age);
+                user.get().setAge(age);
             }
 
-            userDao.update(user);
+            userDao.update(user.orElse(null));
             System.out.println("User updated successfully!");
             logger.info("Updated user: {}", user);
         } catch (Exception e) {
@@ -149,18 +152,18 @@ public class UserService {
         }
     }
 
-    private void deleteUser() {
+    public void deleteUser() {
         System.out.print("\nEnter user ID to delete: ");
         Long id = readLongInput();
 
         try {
-            User user = userDao.findById(id);
-            if (user == null) {
+            Optional<User> user = userDao.findById(id);
+            if (user.isEmpty()) {
                 System.out.println("User not found with ID: " + id);
                 return;
             }
 
-            userDao.delete(user);
+            userDao.delete(user.orElse(null));
             System.out.println("User deleted successfully!");
             logger.info("Deleted user with ID: {}", id);
         } catch (Exception e) {
@@ -169,7 +172,7 @@ public class UserService {
         }
     }
 
-    private int readIntInput() {
+    public int readIntInput() {
         while (true) {
             try {
                 return Integer.parseInt(scanner.nextLine());
@@ -179,7 +182,7 @@ public class UserService {
         }
     }
 
-    private Long readLongInput() {
+    public Long readLongInput() {
         while (true) {
             try {
                 return Long.parseLong(scanner.nextLine());
