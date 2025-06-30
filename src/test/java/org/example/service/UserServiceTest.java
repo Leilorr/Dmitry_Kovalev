@@ -1,20 +1,22 @@
 package org.example.service;
 
-import org.example.dao.UserDao;
+import org.example.dto.UserDTO;
 import org.example.model.User;
-import org.junit.jupiter.api.BeforeEach;
+import org.example.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.modelmapper.ModelMapper;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.Scanner;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -22,107 +24,54 @@ import static org.mockito.Mockito.*;
 class UserServiceTest {
 
     @Mock
-    private UserDao userDao;
+    private UserRepository userRepository;
 
-    @Mock
-    private Scanner scanner;
+    @Spy
+    private ModelMapper modelMapper = new ModelMapper();
 
     @InjectMocks
     private UserService userService;
 
-    private User testUser;
+    @Test
+    void createUserShouldReturnUserDTOWhenValidInput() {
+        // Arrange
+        UserDTO inputDTO = new UserDTO(null, "Test", "test@example.com", 25, null);
+        User savedUser = new User(1L, "Test", "test@example.com", 25, null);
 
-    @BeforeEach
-    void setUp() {
-        testUser = new User("Test User", "test@example.com", 25);
-        testUser.setId(1L);
+        when(userRepository.existsByEmail("test@example.com")).thenReturn(false);
+        when(userRepository.save(any(User.class))).thenReturn(savedUser);
+
+        // Act
+        UserDTO result = userService.createUser(inputDTO);
+
+        // Assert
+        assertThat(result.getId()).isEqualTo(1L);
+        assertThat(result.getName()).isEqualTo("Test");
+        verify(userRepository).save(any(User.class));
     }
 
     @Test
-    void createUser_ShouldSaveUser_WhenValidInput() {
-        when(scanner.nextLine())
-                .thenReturn("Test User")
-                .thenReturn("test@example.com");
-        when(scanner.nextInt()).thenReturn(25);
-        doNothing().when(userDao).save(any(User.class));
+    void getAllUsersShouldReturnListOfUserDTOs() {
+        // Arrange
+        User user = new User(1L, "Test", "test@example.com", 25, null);
+        when(userRepository.findAll()).thenReturn(Collections.singletonList(user));
 
-        User result = userService.createUser("Test User", "test@example.com", 25);
+        // Act
+        List<UserDTO> result = userService.getAllUsers();
 
-        assertThat(result).isNull();
-        verify(userDao).save(any(User.class));
+        // Assert
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getEmail()).isEqualTo("test@example.com");
     }
 
     @Test
-    void viewAllUsers_ShouldPrintAllUsers_WhenUsersExist() {
-        List<User> users = Arrays.asList(
-                new User("User1", "user1@example.com", 20),
-                new User("User2", "user2@example.com", 30)
-        );
-        when(userDao.findAll()).thenReturn(users);
+    void updateUserShouldThrowExceptionWhenUserNotFound() {
+        // Arrange
+        when(userRepository.findById(999L)).thenReturn(Optional.empty());
 
-        userService.viewAllUsers();
-
-        verify(userDao).findAll();
-    }
-
-    @Test
-    void viewUserById_ShouldPrintUser_WhenUserExists() {
-        when(scanner.nextLine()).thenReturn("1");
-        when(userDao.findById(1L)).thenReturn(Optional.of(testUser));
-
-        userService.viewUserById();
-
-        verify(userDao).findById(1L);
-    }
-
-    @Test
-    void updateUser_ShouldUpdateUser_WhenUserExists() {
-        when(scanner.nextLine())
-                .thenReturn("1")
-                .thenReturn("")
-                .thenReturn("new@example.com")
-                .thenReturn("30");
-        when(scanner.nextInt()).thenReturn(30);
-        when(userDao.findById(1L)).thenReturn(Optional.of(testUser));
-        doNothing().when(userDao).update(any(User.class));
-
-        userService.updateUser();
-
-        verify(userDao).update(testUser);
-        assertThat(testUser.getEmail()).isEqualTo("new@example.com");
-        assertThat(testUser.getAge()).isEqualTo(30);
-    }
-
-    @Test
-    void deleteUser_ShouldDeleteUser_WhenUserExists() {
-        when(scanner.nextLine()).thenReturn("1");
-        when(userDao.findById(1L)).thenReturn(Optional.of(testUser));
-        doNothing().when(userDao).delete(testUser);
-
-        userService.deleteUser();
-
-        verify(userDao).delete(testUser);
-    }
-
-    @Test
-    void readIntInput_ShouldReturnInt_WhenValidInput() {
-        when(scanner.nextLine())
-                .thenReturn("abc")
-                .thenReturn("123");
-
-        int result = userService.readIntInput();
-
-        assertThat(result).isEqualTo(123);
-    }
-
-    @Test
-    void readLongInput_ShouldReturnLong_WhenValidInput() {
-        when(scanner.nextLine())
-                .thenReturn("xyz")
-                .thenReturn("456");
-
-        long result = userService.readLongInput();
-
-        assertThat(result).isEqualTo(456L);
+        // Act & Assert
+        assertThatThrownBy(() -> userService.updateUser(999L, new UserDTO()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("User not found");
     }
 }
