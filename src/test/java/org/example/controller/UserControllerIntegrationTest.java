@@ -1,75 +1,125 @@
 package org.example.controller;
 
-import org.example.dto.UserDTO;
+import org.example.dto.UserRequestDto;
+import org.example.dto.UserResponseDto;
+import org.example.service.UserService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.time.LocalDateTime;
+import java.util.Collections;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doNothing;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+@WebMvcTest(UserController.class)
 class UserControllerIntegrationTest {
-
     @Autowired
     private MockMvc mockMvc;
 
     @Autowired
     private ObjectMapper objectMapper;
 
+    @MockBean
+    private UserService userService;
+
     @Test
     void shouldCreateUser() throws Exception {
-        UserDTO userDTO = UserDTO.builder()
-                .name("Test User")
-                .email("test@example.com")
-                .age(25)
-                .build();
+        UserRequestDto userRequest = new UserRequestDto();
+        userRequest.setName("John Doe");
+        userRequest.setEmail("john@example.com");
+        userRequest.setAge(30);
+
+        UserResponseDto userResponse = new UserResponseDto();
+        userResponse.setId(1L);
+        userResponse.setName("John Doe");
+        userResponse.setEmail("john@example.com");
+        userResponse.setAge(30);
+        userResponse.setCreatedAt(LocalDateTime.now());
+
+        given(userService.createUser(any(UserRequestDto.class))).willReturn(userResponse);
 
         mockMvc.perform(post("/api/users")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(userDTO)))
+                        .content(objectMapper.writeValueAsString(userRequest)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name").value("Test User"))
-                .andExpect(jsonPath("$.email").value("test@example.com"));
+                .andExpect(jsonPath("$.id").value(1L))
+                .andExpect(jsonPath("$.name").value("John Doe"))
+                .andExpect(jsonPath("$.email").value("john@example.com"));
     }
 
     @Test
-    void shouldGetAllUsers() throws Exception {
+    void shouldReturnBadRequestWhenEmailExists() throws Exception {
+        UserRequestDto userRequest = new UserRequestDto();
+        userRequest.setName("John Doe");
+        userRequest.setEmail("john@example.com");
+        userRequest.setAge(30);
+
+        given(userService.createUser(any(UserRequestDto.class)))
+                .willThrow(new IllegalArgumentException("Email already exists"));
+
+        mockMvc.perform(post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Email already exists"));
+    }
+
+    @Test
+    void shouldReturnAllUsers() throws Exception {
+        UserResponseDto userResponse = new UserResponseDto();
+        userResponse.setId(1L);
+        userResponse.setName("John Doe");
+        userResponse.setEmail("john@example.com");
+        userResponse.setAge(30);
+        userResponse.setCreatedAt(LocalDateTime.now());
+
+        given(userService.getAllUsers()).willReturn(Collections.singletonList(userResponse));
+
         mockMvc.perform(get("/api/users"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray());
+                .andExpect(jsonPath("$[0].id").value(1L))
+                .andExpect(jsonPath("$[0].name").value("John Doe"));
     }
 
     @Test
     void shouldUpdateUser() throws Exception {
-        UserDTO createDTO = UserDTO.builder()
-                .name("Initial Name")
-                .email("initial@example.com")
-                .age(30)
-                .build();
+        UserRequestDto userRequest = new UserRequestDto();
+        userRequest.setName("John Updated");
+        userRequest.setEmail("john.updated@example.com");
+        userRequest.setAge(31);
 
-        String response = mockMvc.perform(post("/api/users")
+        UserResponseDto userResponse = new UserResponseDto();
+        userResponse.setId(1L);
+        userResponse.setName("John Updated");
+        userResponse.setEmail("john.updated@example.com");
+        userResponse.setAge(31);
+        userResponse.setCreatedAt(LocalDateTime.now());
+
+        given(userService.updateUser(anyLong(), any(UserRequestDto.class))).willReturn(userResponse);
+
+        mockMvc.perform(put("/api/users/1")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(createDTO)))
-                .andReturn().getResponse().getContentAsString();
-
-        UserDTO createdUser = objectMapper.readValue(response, UserDTO.class);
-
-        UserDTO updateDTO = UserDTO.builder()
-                .name("Updated Name")
-                .email("updated@example.com")
-                .age(35)
-                .build();
-
-        mockMvc.perform(put("/api/users/" + createdUser.getId())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(updateDTO)))
+                        .content(objectMapper.writeValueAsString(userRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("Updated Name"));
+                .andExpect(jsonPath("$.name").value("John Updated"))
+                .andExpect(jsonPath("$.email").value("john.updated@example.com"));
+    }
+
+    @Test
+    void shouldDeleteUser() throws Exception {
+        doNothing().when(userService).deleteUser(1L);
+
+        mockMvc.perform(delete("/api/users/1"))
+                .andExpect(status().isNoContent());
     }
 }
