@@ -1,13 +1,16 @@
 package org.example.dto;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import javax.validation.constraints.Email;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 
-
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
 public class UserRequestDto {
     @NotBlank(message = "Name is mandatory")
     private String name;
