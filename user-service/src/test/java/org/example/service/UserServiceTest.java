@@ -1,4 +1,4 @@
-package org.example.service;
+package java.org.example.service;
 
 import org.example.dto.UserRequestDto;
 import org.example.dto.UserResponseDto;
@@ -6,6 +6,7 @@ import org.example.exception.UserNotFoundException;
 import org.example.mapper.UserMapper;
 import org.example.model.User;
 import org.example.repository.UserRepository;
+import org.example.service.UserServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
