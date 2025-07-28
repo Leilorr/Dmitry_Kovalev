@@ -1,0 +1,15 @@
+server:
+  port: 8761
+
+eureka:
+  instance:
+    hostname: discovery-service
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  application:
+    name: discovery-service

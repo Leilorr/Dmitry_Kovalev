@@ -31,7 +31,7 @@
             </snapshots>
         </repository>
 
-        <!-- Дополнительный репозиторий для Resilience4J (если нужно) -->
+        <!-- Дополнительный репозиторий для Resilience4J -->
         <repository>
             <id>jitpack.io</id>
             <url>https://jitpack.io</url>
